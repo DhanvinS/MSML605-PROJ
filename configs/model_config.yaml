@@ -1,0 +1,37 @@
+xgboost:
+  base_params:
+    objective: "reg:squarederror"
+    n_estimators: 500
+    learning_rate: 0.05
+    max_depth: 6
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_weight: 5
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+    early_stopping_rounds: 30
+    eval_metric: "rmse"
+    seed: 42
+
+  quantile_params:
+    objective: "reg:quantileerror"
+    quantile_alpha_low: 0.1
+    quantile_alpha_high: 0.9
+
+  optuna:
+    n_trials: 50
+    timeout: 3600           # seconds
+    search_space:
+      learning_rate: [0.005, 0.3]       # log-uniform
+      max_depth: [3, 9]                  # int
+      subsample: [0.5, 1.0]              # uniform
+      colsample_bytree: [0.4, 1.0]       # uniform
+      min_child_weight: [1, 20]          # int
+      reg_alpha: [0.0001, 10.0]          # log-uniform
+      n_estimators: [100, 800]           # int
+
+training:
+  n_cv_splits: 3
+  cv_gap: 5                # days gap to prevent lookahead
+  test_size: 0.10          # fraction held out for final test
+  val_size: 0.125          # fraction of remaining used as val in walk-forward

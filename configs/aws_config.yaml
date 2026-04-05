@@ -1,0 +1,37 @@
+aws:
+  region: "us-east-1"
+  account_id: "${AWS_ACCOUNT_ID}"   # set via environment variable
+
+s3:
+  bucket: "${S3_BUCKET_NAME}"       # e.g. stock-prediction-mlops-bucket
+  prefixes:
+    raw: "raw"
+    processed: "processed"
+    models: "models"
+    baseline: "baseline"
+    monitoring: "monitoring"
+
+ecr:
+  repository: "stock-prediction"
+  inference_image: "${ECR_URI}/stock-prediction/inference"
+  training_image: "${ECR_URI}/stock-prediction/training"
+
+sagemaker:
+  execution_role: "${SAGEMAKER_ROLE_ARN}"
+  inference_instance: "ml.t3.medium"
+  training_instance: "ml.m5.xlarge"
+  training_volume_gb: 30
+  training_max_seconds: 3600
+  endpoint_name: "stock-prediction-endpoint"
+  model_monitor_schedule: "cron(0 * ? * * *)"   # hourly
+
+lambda:
+  retrain_function_name: "stock-prediction-retrain"
+  retrain_threshold_psi: 0.2
+
+cloudwatch:
+  namespace: "StockPredictor/DriftMetrics"
+  alarm_name: "StockPredictorDriftAlarm"
+  drift_threshold: 0.2
+  alarm_evaluation_periods: 1
+  sns_topic_arn: "${SNS_TOPIC_ARN}"

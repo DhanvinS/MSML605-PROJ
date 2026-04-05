@@ -1,0 +1,18 @@
+# SageMaker-compatible training container
+# SageMaker injects data at /opt/ml/input/data/train/ and expects output at /opt/ml/model/
+FROM python:3.11-slim
+
+WORKDIR /opt/ml/code
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/ ./src/
+COPY configs/ ./configs/
+
+# SageMaker looks for SAGEMAKER_PROGRAM env var as the entry script
+ENV SAGEMAKER_PROGRAM=train_xgboost.py
+ENV PYTHONPATH=/opt/ml/code
+
+# SM calls: python train_xgboost.py (via sagemaker-training-toolkit or directly)
+ENTRYPOINT ["python", "src/training/train_xgboost.py"]

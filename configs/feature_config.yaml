@@ -1,0 +1,27 @@
+tickers:
+  - AAPL
+  - GOOGL
+  - MSFT
+  - TSLA
+  - AMZN
+
+data:
+  default_interval: "1d"
+  live_interval: "1h"
+  training_start: "2019-01-01"
+  training_end: "2024-01-01"
+  test_start: "2024-01-01"
+
+features:
+  sma_windows: [5, 10, 20, 50]
+  ema_windows: [12, 26]
+  rsi_period: 14
+  bollinger_window: 20
+  bollinger_std: 2
+  volume_sma_window: 20
+  lag_periods: [1, 2, 3, 4, 5, 6, 7, 8]
+  target_horizon: 1          # days forward for target return
+
+pipeline:
+  min_rows_after_dropna: 200
+  scaler: "RobustScaler"     # RobustScaler | StandardScaler
