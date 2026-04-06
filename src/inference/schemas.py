@@ -6,7 +6,7 @@ from typing import Annotated
 from pydantic import BaseModel, field_validator, model_validator
 
 TICKER_RE = re.compile(r"^[A-Z]{1,5}$")
-N_FEATURES = 23  # must match feature pipeline output
+N_FEATURES = 30  # must match feature pipeline output
 
 
 class PredictRequest(BaseModel):

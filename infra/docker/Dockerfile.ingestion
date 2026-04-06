@@ -1,0 +1,25 @@
+# Ingestion image — separate from training/inference to avoid pandas/numpy conflicts.
+# defeatbeta-api requires pandas>=3 and numpy>=2.2.5 which clash with the rest.
+FROM public.ecr.aws/docker/library/python:3.11-slim
+
+WORKDIR /opt/ml/processing
+
+# defeatbeta-api and its transitive deps
+COPY requirements-ingestion.txt .
+RUN pip install --no-cache-dir -r requirements-ingestion.txt
+
+# Minimal packages for feature engineering
+RUN pip install --no-cache-dir \
+    pandas>=3.0.1 \
+    numpy>=2.2.5 \
+    scikit-learn \
+    pyyaml \
+    boto3 \
+    pyarrow
+
+COPY src/ ./src/
+COPY configs/ ./configs/
+
+ENV PYTHONPATH=/opt/ml/processing
+
+ENTRYPOINT ["python", "src/ingestion/ingest_and_upload.py"]

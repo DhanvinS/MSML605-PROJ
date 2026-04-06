@@ -1,0 +1,50 @@
+version: 0.2
+
+# CodeBuild buildspec — builds 3 Docker images and pushes to ECR.
+# Runs on linux/amd64 natively (no buildx needed).
+# Plain `docker build` produces Docker manifest format — compatible with SageMaker.
+
+env:
+  variables:
+    AWS_REGION: "us-east-1"
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to ECR..."
+      - ECR_BASE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_BASE
+      - echo "ECR login successful"
+
+  build:
+    commands:
+      - echo "Building ingestion image..."
+      - docker build
+          -f infra/docker/Dockerfile.ingestion
+          -t $ECR_BASE/stock-prediction/ingestion:latest
+          -t $ECR_BASE/stock-prediction/ingestion:$CODEBUILD_BUILD_NUMBER
+          .
+      - echo "Building training image..."
+      - docker build
+          -f infra/docker/Dockerfile.training
+          -t $ECR_BASE/stock-prediction/training:latest
+          -t $ECR_BASE/stock-prediction/training:$CODEBUILD_BUILD_NUMBER
+          .
+      - echo "Building inference image..."
+      - docker build
+          -f infra/docker/Dockerfile.inference
+          -t $ECR_BASE/stock-prediction/inference:latest
+          -t $ECR_BASE/stock-prediction/inference:$CODEBUILD_BUILD_NUMBER
+          .
+
+  post_build:
+    commands:
+      - echo "Pushing images to ECR..."
+      - docker push $ECR_BASE/stock-prediction/ingestion:latest
+      - docker push $ECR_BASE/stock-prediction/ingestion:$CODEBUILD_BUILD_NUMBER
+      - docker push $ECR_BASE/stock-prediction/training:latest
+      - docker push $ECR_BASE/stock-prediction/training:$CODEBUILD_BUILD_NUMBER
+      - docker push $ECR_BASE/stock-prediction/inference:latest
+      - docker push $ECR_BASE/stock-prediction/inference:$CODEBUILD_BUILD_NUMBER
+      - echo "All images pushed successfully."
+      - printf '%s\n' "ingestion:$CODEBUILD_BUILD_NUMBER" "training:$CODEBUILD_BUILD_NUMBER" "inference:$CODEBUILD_BUILD_NUMBER"

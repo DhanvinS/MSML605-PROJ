@@ -1,10 +1,9 @@
-"""Yahoo Finance data downloader using yfinance."""
+"""Price data downloader using defeat-beta-api."""
 
 import logging
-from datetime import datetime
 
 import pandas as pd
-import yfinance as yf
+from defeatbeta_api.data.ticker import Ticker
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,7 @@ def fetch_ohlcv(
     end: str,
     interval: str = "1d",
 ) -> pd.DataFrame:
-    """Download OHLCV data for a single ticker from Yahoo Finance.
+    """Download OHLCV data for a single ticker from defeat-beta-api.
 
     Args:
         ticker: Stock symbol, e.g. "AAPL".
@@ -31,28 +30,25 @@ def fetch_ohlcv(
     Raises:
         ValueError: If the download returns empty or malformed data.
     """
-    logger.info("Fetching %s from %s to %s (interval=%s)", ticker, start, end, interval)
+    logger.info("Fetching %s from defeatbeta-api (%s to %s)", ticker, start, end)
 
-    df = yf.download(
-        ticker,
-        start=start,
-        end=end,
-        interval=interval,
-        auto_adjust=True,
-        progress=False,
-        threads=False,
-    )
+    if interval != "1d":
+        raise ValueError(
+            "defeatbeta-api price() currently supports daily data in this pipeline; "
+            f"received interval={interval}"
+        )
+
+    raw_df = Ticker(ticker).price()
+    df = _normalize_price_df(raw_df)
+    if not isinstance(df.index, pd.DatetimeIndex):
+        raise ValueError(
+            f"{ticker}: expected DatetimeIndex after normalization, got {type(df.index).__name__}. "
+            "Check the ticker symbol is valid (e.g. Meta is now 'META', not 'FB')."
+        )
+    df = df.loc[(df.index >= pd.to_datetime(start)) & (df.index <= pd.to_datetime(end))]
 
     if df.empty:
-        raise ValueError(f"No data returned for {ticker} [{start} – {end}]")
-
-    # yfinance may return MultiIndex columns when fetching multiple tickers
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.droplevel(1)
-
-    df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
-    df.index = pd.to_datetime(df.index)
-    df.sort_index(inplace=True)
+        raise ValueError(f"No data returned for {ticker} [{start} - {end}]")
 
     _validate(df, ticker)
     logger.info("Fetched %d rows for %s", len(df), ticker)
@@ -82,3 +78,25 @@ def _validate(df: pd.DataFrame, ticker: str) -> None:
 
     if df.index.tz is not None:
         df.index = df.index.tz_localize(None)
+
+
+def _normalize_price_df(raw_df: pd.DataFrame) -> pd.DataFrame:
+    if raw_df is None or raw_df.empty:
+        return pd.DataFrame(columns=["Open", "High", "Low", "Close", "Volume"])
+
+    column_map = {
+        "report_date": "Date",
+        "open": "Open",
+        "high": "High",
+        "low": "Low",
+        "close": "Close",
+        "volume": "Volume",
+    }
+    missing = [c for c in column_map if c not in raw_df.columns]
+    if missing:
+        raise ValueError(f"defeatbeta-api response missing columns: {missing}")
+
+    df = raw_df.rename(columns=column_map)[list(column_map.values())].copy()
+    df["Date"] = pd.to_datetime(df["Date"])
+    df = df.set_index("Date").sort_index()
+    return df[["Open", "High", "Low", "Close", "Volume"]]

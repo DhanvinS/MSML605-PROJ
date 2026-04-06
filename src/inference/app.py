@@ -85,6 +85,20 @@ async def health() -> HealthResponse:
     )
 
 
+@app.get("/ping")
+async def ping() -> dict:
+    """SageMaker health check endpoint."""
+    if not predictor.is_loaded:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    return {"status": "ok"}
+
+
+@app.post("/invocations")
+async def invocations(req: PredictRequest) -> PredictResponse:
+    """SageMaker inference endpoint."""
+    return await predict(req)
+
+
 @app.get("/metrics-summary", response_model=MetricsResponse)
 async def metrics_summary() -> MetricsResponse:
     latencies = list(_request_latencies)

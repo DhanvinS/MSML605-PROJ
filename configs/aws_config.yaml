@@ -3,35 +3,58 @@ aws:
   account_id: "${AWS_ACCOUNT_ID}"   # set via environment variable
 
 s3:
-  bucket: "${S3_BUCKET_NAME}"       # e.g. stock-prediction-mlops-bucket
+  bucket: "${S3_BUCKET_NAME}"       # e.g. stock-prediction-mlops-<account-id>
   prefixes:
     raw: "raw"
     processed: "processed"
     models: "models"
     baseline: "baseline"
-    monitoring: "monitoring"
+    captures: "captures"            # SageMaker Data Capture output
+    monitoring: "monitoring"        # drift reports
 
 ecr:
-  repository: "stock-prediction"
-  inference_image: "${ECR_URI}/stock-prediction/inference"
-  training_image: "${ECR_URI}/stock-prediction/training"
+  base: "${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com"
+  repos:
+    ingestion: "stock-prediction/ingestion"
+    training:  "stock-prediction/training"
+    inference: "stock-prediction/inference"
+
+codebuild:
+  project_name: "stock-prediction-build"
+  image: "aws/codebuild/standard:7.0"
+  compute_type: "BUILD_GENERAL1_MEDIUM"
 
 sagemaker:
   execution_role: "${SAGEMAKER_ROLE_ARN}"
-  inference_instance: "ml.t3.medium"
-  training_instance: "ml.m5.xlarge"
+  endpoint_name: "stock-prediction-endpoint"
+  # Instance types
+  ingestion_instance: "ml.m5.large"
+  training_instance:  "ml.m5.xlarge"
+  inference_instance: "ml.t2.medium"   # ml.t2.medium is the smallest valid endpoint instance
   training_volume_gb: 30
   training_max_seconds: 3600
-  endpoint_name: "stock-prediction-endpoint"
-  model_monitor_schedule: "cron(0 * ? * * *)"   # hourly
 
 lambda:
-  retrain_function_name: "stock-prediction-retrain"
-  retrain_threshold_psi: 0.2
+  function_name: "stock-prediction-orchestrator"
+  runtime: "python3.11"
+  timeout: 300
+  memory_mb: 512
+  retrain_psi_threshold: 0.2
+
+eventbridge:
+  rules:
+    daily_drift:       "stock-prediction-daily-drift"
+    processing_done:   "stock-prediction-processing-complete"
+    training_done:     "stock-prediction-training-complete"
+  schedule: "cron(0 6 * * ? *)"    # 6 AM UTC daily
 
 cloudwatch:
   namespace: "StockPredictor/DriftMetrics"
   alarm_name: "StockPredictorDriftAlarm"
   drift_threshold: 0.2
-  alarm_evaluation_periods: 1
-  sns_topic_arn: "${SNS_TOPIC_ARN}"
+  evaluation_periods: 1
+  period_seconds: 86400             # 1 day
+
+sns:
+  topic_name: "stock-prediction-alerts"
+  topic_arn: "${SNS_TOPIC_ARN}"

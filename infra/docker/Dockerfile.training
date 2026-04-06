@@ -1,6 +1,6 @@
 # SageMaker-compatible training container
 # SageMaker injects data at /opt/ml/input/data/train/ and expects output at /opt/ml/model/
-FROM python:3.11-slim
+FROM public.ecr.aws/docker/library/python:3.11-slim
 
 WORKDIR /opt/ml/code
 
