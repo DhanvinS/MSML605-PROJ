@@ -23,5 +23,5 @@ features:
   target_horizon: 1          # days forward for target return
 
 pipeline:
-  min_rows_after_dropna: 200
+  min_rows_after_dropna: 150
   scaler: "RobustScaler"     # RobustScaler | StandardScaler

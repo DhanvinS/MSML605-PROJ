@@ -184,10 +184,27 @@ def _captures_exist() -> bool:
 
 
 def _read_drift_report() -> dict:
+    """Read the drift report, but only act on it if it was written within the last hour.
+
+    If the report is older than 1 hour it means the drift check skipped (no recent
+    captures) and did not overwrite the file — so we must not act on stale results.
+    """
     s3 = boto3.client("s3")
     try:
         obj = s3.get_object(Bucket=S3_BUCKET, Key="monitoring/latest_drift_report.json")
-        return json.loads(obj["Body"].read().decode())
+        report = json.loads(obj["Body"].read().decode())
+
+        last_modified = obj["LastModified"]  # timezone-aware datetime from S3
+        age_minutes = (datetime.now(timezone.utc) - last_modified).total_seconds() / 60
+        if age_minutes > 60:
+            logger.warning(
+                "Drift report is %.0f minutes old (last modified: %s) — treating as stale, no retraining.",
+                age_minutes,
+                last_modified.isoformat(),
+            )
+            return {"trigger_retraining": False, "max_psi": report.get("max_psi", 0.0), "stale": True}
+
+        return report
     except Exception as e:
         logger.warning("Could not read drift report: %s. Defaulting to no retrain.", e)
         return {"trigger_retraining": False, "max_psi": 0.0}
