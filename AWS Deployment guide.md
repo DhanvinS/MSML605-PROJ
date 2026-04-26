@@ -31,7 +31,7 @@ AWS_SECRET_ACCESS_KEY=<your secret key>
 S3_BUCKET_NAME=stock-prediction-mlops-<your-account-id>   # must be globally unique
 ALERT_EMAIL=your@email.com
 TICKERS=AAPL,MSFT,GOOGL,AMZN,META,TSLA,NVDA
-LOOKBACK_DAYS=730
+LOOKBACK_DAYS=365
 ```
 
 > Never commit `.env` to git — it is already in `.gitignore`.
@@ -393,25 +393,6 @@ bash scripts/03_initial_ingest.sh   # fetch fresh data
 bash scripts/04_initial_train.sh    # train new model
 bash scripts/05_deploy.sh           # redeploy endpoint
 ```
-
----
-
-## Estimated AWS Costs (us-east-1)
-
-| Service | Usage | Estimated Cost |
-|---------|-------|---------------|
-| SageMaker Endpoint (ml.t2.medium) | 24 hrs/day | ~$1.50/day |
-| SageMaker Training (ml.m5.xlarge) | ~20 min/retrain | ~$0.10/retrain |
-| SageMaker Processing (ml.m5.large) | ~10 min/run × 2 runs | ~$0.05/retrain |
-| CodeBuild (standard:7.0) | ~15 min/build | ~$0.01/build |
-| Lambda | ~5 invocations/day | < $0.01/day |
-| S3 | ~1 GB data | ~$0.03/month |
-| CloudWatch | metrics + logs | ~$0.10/month |
-| **Total** | | **~$50-60/month** |
-
-> Cheapest option: Stop the endpoint when not in use.  
-> `aws sagemaker delete-endpoint --endpoint-name stock-prediction-endpoint`  
-> Redeploy with `bash scripts/05_deploy.sh` when needed.
 
 ---
 

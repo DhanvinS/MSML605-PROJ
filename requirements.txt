@@ -31,3 +31,6 @@ streamlit-autorefresh==1.0.1
 
 # Config
 pyyaml==6.0.2
+
+# SOTA comparison — needed for scripts/run_prophet_comparison.py
+statsmodels

@@ -22,7 +22,7 @@ from locust import HttpUser, between, task
 
 
 TICKERS = ["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN"]
-N_FEATURES = 23
+N_FEATURES = 30
 
 
 def _random_features() -> list[float]:

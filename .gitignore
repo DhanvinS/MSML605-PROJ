@@ -1,10 +1,13 @@
 /.venv
 .env
 .git/*
-data/*
-models/*
 __pycache__/*
 *.pyc
 .pytest_cache/*
 output/*
 *.egg-info/*
+.DS_Store
+data/.DS_Store
+infra/.DS_Store
+src/.DS_Store
+tests/.DS_Store
