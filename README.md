@@ -287,13 +287,3 @@ dashboard/          Streamlit monitoring dashboard
 | Load Testing | Locust 2.29 |
 | AWS | boto3 1.34, SageMaker SDK 2.220 |
 | Drift Detection | KS test (scipy), PSI (custom) |
-
----
-
-## Team Contributions
-
-*(Fill in before submission)*
-
-| Member | Contributions |
-|---|---|
-| — | — |
