@@ -18,18 +18,18 @@ import requests
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
-from dashboard.components.drift_panel import (
+from components.drift_panel import (
     render_drift_banner,
     render_drift_trend,
     render_ks_heatmap,
     render_psi_bar_chart,
 )
-from dashboard.components.metrics_panel import (
+from components.metrics_panel import (
     render_latency_chart,
     render_retraining_table,
     render_system_metrics,
 )
-from dashboard.components.prediction_chart import (
+from components.prediction_chart import (
     render_metrics_cards,
     render_prediction_chart,
 )

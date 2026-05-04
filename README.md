@@ -92,7 +92,28 @@ curl -X POST http://127.0.0.1:8000/predict \
   -d '{"ticker":"AAPL","features":[0.1,0.2,-0.1,0.3,0.5,0.4,0.6,-0.2,0.1,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.1,0.2,0.3,0.4,0.5]}'
 ```
 
-### 7. Run Load Tests (server must be running)
+### 7. Run the Monitoring Dashboard (server must be running)
+
+```bash
+streamlit run dashboard/app.py
+# Dashboard: http://localhost:8501
+```
+
+The dashboard connects to the inference server at `http://localhost:8000` by default and auto-refreshes every 60 seconds. It has three tabs:
+
+- **Live Predictions** — actual vs predicted closing price with p10–p90 confidence band for any ticker and date range
+- **Drift Metrics** — per-feature PSI bar chart, drift trend over time, and full KS/PSI feature table
+- **System Metrics** — request count, avg/p95 latency, uptime, and retraining event history
+
+Override defaults via environment variables:
+
+```bash
+API_URL=http://localhost:8000 \
+DRIFT_REPORT_PATH=data/baseline/latest_drift_report.json \
+streamlit run dashboard/app.py
+```
+
+### 8. Run Load Tests (server must be running)
 
 ```bash
 # Baseline — 5 users, 60 seconds
@@ -212,6 +233,28 @@ Performance targets: p95 latency < 200 ms, error rate < 1%, throughput > 100 RPS
 
 AWS latency will be higher than local due to the SageMaker network round-trip (~20–80 ms additional), but the endpoint scales horizontally under load whereas the local server is single-instance.
 
+### Step 8 — Run the Monitoring Dashboard Against AWS
+
+The dashboard points at whatever `API_URL` serves the `/predict` and `/metrics-summary` endpoints. For AWS, keep the proxy from Step 7 running and launch the dashboard in a second terminal:
+
+```bash
+# Terminal 1 — proxy must already be running (from Step 7)
+PYTHONPATH=$(pwd) uvicorn dashboard.proxy:app --host 127.0.0.1 --port 8000 --workers 4
+
+# Terminal 2 — launch dashboard
+S3_BUCKET_NAME=<your-bucket-name> \
+API_URL=http://localhost:8000 \
+streamlit run dashboard/app.py
+# Dashboard: http://localhost:8501
+```
+
+Setting `S3_BUCKET_NAME` enables the dashboard to:
+- Pull the latest processed parquet files for each ticker directly from S3
+- Download the latest drift report from `s3://<bucket>/monitoring/latest_drift_report.json`
+- Show retraining events pulled from CloudWatch Lambda logs
+
+Without `S3_BUCKET_NAME` the dashboard falls back to local files in `data/` (useful for offline inspection).
+
 ### Useful AWS Commands
 
 ```bash
@@ -268,7 +311,10 @@ configs/
 infra/
   docker/           Dockerfiles for ingestion, training, inference, dashboard
   lambda/           Lambda function entry point
-dashboard/          Streamlit monitoring dashboard
+dashboard/
+  app.py            Streamlit monitoring dashboard (3 tabs: predictions, drift, system)
+  proxy.py          FastAPI proxy — forwards requests to SageMaker for load tests and dashboard
+  components/       Reusable Plotly chart components (prediction_chart, drift_panel, metrics_panel)
 ```
 
 ---
